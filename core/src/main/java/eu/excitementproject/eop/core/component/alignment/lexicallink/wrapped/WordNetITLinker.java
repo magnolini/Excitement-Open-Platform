@@ -72,7 +72,11 @@ public class WordNetITLinker implements AlignmentComponent {
 	// private variable 
 	private final LexicalAlignerFromLexicalResource worker; 
 	
-	private static final HashSet<WordNetRelation> defaultEntailingRelations = new HashSet<WordNetRelation>(Arrays.asList(WordNetRelation.SYNONYM)); 
+//	private static final HashSet<WordNetRelation> defaultEntailingRelations = new HashSet<WordNetRelation>(Arrays.asList(WordNetRelation.SYNONYM));
+	
+//	private static final HashSet<WordNetRelation> defaultEntailingRelations = new HashSet<WordNetRelation>(Arrays.asList(WordNetRelation.HYPERNYM));
+	
+	private static final HashSet<WordNetRelation> defaultEntailingRelations = new HashSet<WordNetRelation>(Arrays.asList(WordNetRelation.HYPERNYM));
 
 	// Default max multi-word expression length 
 	private static final int defaultMaxPhrase = 1; 
@@ -87,4 +91,10 @@ public class WordNetITLinker implements AlignmentComponent {
 	{
 		return null; 
 	}
+	
+	public void close() throws AlignmentComponentException
+	{
+		worker.close(); 
+	}
+
 }

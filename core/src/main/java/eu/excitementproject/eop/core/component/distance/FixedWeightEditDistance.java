@@ -13,8 +13,10 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Logger;
 
+import org.apache.uima.cas.FSIterator;
 import org.apache.uima.cas.text.AnnotationIndex;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.jcas.tcas.Annotation;
 
 import de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.ART;
@@ -25,6 +27,7 @@ import de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.POS;
 import de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.PP;
 import de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.PUNC;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Token;
+import eu.excitement.type.entailment.Pair;
 import eu.excitementproject.eop.common.component.distance.DistanceCalculation;
 import eu.excitementproject.eop.common.component.distance.DistanceComponentException;
 import eu.excitementproject.eop.common.component.distance.DistanceValue;
@@ -114,6 +117,14 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
     Set<WordNetRelation> relations = new HashSet<WordNetRelation>();
 	protected HashSet<String> ignoreSet = null;
 	protected String normalizationType;
+	private int resourceMatch;
+	private int positiveResourceMatch;
+	private int negativeResourceMatch;
+	private int lemmasMatch;
+	private int numberOfCoupleEntailed;
+	private int numberOfCoupleNotEntailed;
+	private int positiveLemmaMatch;
+	private int negativeLemmaMatch;
 
     static Logger logger = Logger.getLogger(FixedWeightEditDistance.class.getName());
     
@@ -176,9 +187,8 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
 							&& componentNameValueTable.getString(PATH_STOP_WORD) != null) {
 						stopWordRemovalPOS = true;
 						initializeStopWordList(componentNameValueTable.getString(PATH_STOP_WORD));
-						logger.info("Stop word list removal activated.");
+						logger.info("Stop word list and pos removal activated.");
 					}
-					logger.info("Stop word removal deactivated.");
 				}
 			}
     		else {
@@ -543,7 +553,7 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
 	    	JCas hView = jcas.getView("HypothesisView"); 
 	    	List<Token> hTokensSequence = getTokenSequences(hView);
 
-	    	distanceValue = distance(tTokensSequence, hTokensSequence);
+	    	distanceValue = distance(tTokensSequence, hTokensSequence, getGoldLabel(jcas));
 	    	
     	} catch (Exception e) {
     		throw new DistanceComponentException(e.getMessage());
@@ -569,7 +579,7 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
 	    	JCas hView = jcas.getView("HypothesisView"); 
 	    	List<Token> hTokensSequence = getTokenSequences(hView);
 	    	
-	    	distanceValue = distance(tTokensSequence, hTokensSequence);
+	    	distanceValue = distance(tTokensSequence, hTokensSequence, getGoldLabel(jcas));
 	    	
     	} catch (Exception e) {
     		throw new ScoringComponentException(e.getMessage());
@@ -721,13 +731,14 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
      *
      * @param source first token sequence
      * @param target second token sequence
+     * @param answer 
      * 
      * @return The edit distance between the sequences of tokens
      * 
      * @throws ArithmeticException
      * 
      */
-    public DistanceValue distance(List<Token> source, List<Token> target ) throws ArithmeticException {
+    public DistanceValue distance(List<Token> source, List<Token> target, String answer ) throws ArithmeticException {
         	
     	//System.err.println(this.toString());
     	
@@ -746,8 +757,23 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
     		for (int i = 1; i <= source.size(); i++)
                 for (int j = 1; j <= target.size(); j++) {
 
+                	setLemmasMatch(getLemmasMatch() + 1);
+                	if("ENTAILMENT".equalsIgnoreCase(answer)){
+                		setNumberOfCoupleEntailed(getNumberOfCoupleEntailed() + 1);
+					}else{
+						setNumberOfCoupleNotEntailed(getNumberOfCoupleNotEntailed() + 1);
+					}
+                	if(getTokenBaseForm(source.get(i-1)).equalsIgnoreCase(getTokenBaseForm(target.get(j-1)))){
+                		if("ENTAILMENT".equalsIgnoreCase(answer)){
+							setPositiveLemmaMatch(getPositiveLemmaMatch() + 1);
+						}else{
+							setNegativeLemmaMatch(getNegativeLemmaMatch() + 1);
+						}
+                	}
+                	
                 	distanceTable[i][j] = minimum(
-                			compare(getTokenBaseForm(source.get(i-1)),getTokenBaseForm(target.get(j-1))) || (
+//                			compare(getTokenBaseForm(source.get(i-1)),getTokenBaseForm(target.get(j-1))) || 
+                			(
                                        
                 					// it doesn't use the PoS to look for the relations in the lexical resource
                 					/* lexR != null && 
@@ -758,9 +784,9 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
 
                                     // it uses the PoS to look for the relations in the lexical resource
                 					lexR != null && lexR.size() > 0 &&
-                						source.get(i-1).getPos().getType().getName().equals(target.get(j-1).getPos().getType().getName()) && 
+                						//source.get(i-1).getPos().getType().getName().equals(target.get(j-1).getPos().getType().getName()) && 
                 						getRulesFromResource(getTokenBaseForm(source.get(i-1)), new ByCanonicalPartOfSpeech(source.get(i-1).getPos().getType().getShortName()),
-                								getTokenBaseForm(target.get(j-1)), new ByCanonicalPartOfSpeech(target.get(j-1).getPos().getType().getShortName())))
+                								getTokenBaseForm(target.get(j-1)), new ByCanonicalPartOfSpeech(target.get(j-1).getPos().getType().getShortName()),answer))
         							
         
                                         ? distanceTable[i - 1][j - 1] + getmMatchWeight(source.get(i-1))
@@ -845,8 +871,9 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
     	
     	try {
     	
-			relations.add(WordNetRelation.SYNONYM);
+//			relations.add(WordNetRelation.SYNONYM);
 			relations.add(WordNetRelation.HYPERNYM);
+			relations.add(WordNetRelation.DERIVATIONALLY_RELATED);
 			
 			@SuppressWarnings("rawtypes")
 			LexicalResource resource = new WordnetLexicalResource(new File(path), false, false, relations, 3);
@@ -967,6 +994,7 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
      * @param leftPos
      * @param rightLemma
      * @param rightPos
+     * @param answer 
      * 
      * @return true if the rule exists; false otherwise
      * 
@@ -974,18 +1002,27 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
      */
     @SuppressWarnings("unchecked")
 	protected boolean getRulesFromResource(String leftLemma, PartOfSpeech leftPos, 
-    		String rightLemma, PartOfSpeech rightPos) throws LexicalResourceException {
+    		String rightLemma, PartOfSpeech rightPos, String answer) throws LexicalResourceException {
     	
     	//logger.info("leftLemma:" + leftLemma + " leftPos:" + leftPos + "\t" + "rightLemma:" + rightLemma + " " + "rightPos:" + rightPos);
     	
     	List<LexicalRule<?>> rules = null;
+    	boolean result = false;
+    	if(!compare(leftLemma, rightLemma)){
     	
 		try {
 			
 			for (int i = 0; i < lexR.size(); i++) {
-				rules = lexR.get(i).getRules(leftLemma, leftPos, rightLemma, rightPos);
+				rules = lexR.get(i).getRules(leftLemma, null, rightLemma, null);
 				if (rules != null && rules.size() > 0) {
-					return true;
+					//System.out.println(leftLemma+" - "+rightLemma);
+					setResourceMatch(getResourceMatch() + 1);
+					if("ENTAILMENT".equalsIgnoreCase(answer)){
+						setPositiveResourceMatch(getPositiveResourceMatch() + 1);
+					}else{
+						setNegativeResourceMatch(getNegativeResourceMatch() + 1);
+					}
+					result = true;
 				}
 			}
 			
@@ -998,8 +1035,8 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
     		//logger.severe("leftLemma:" + leftLemma + " leftPos:" + leftPos + "\t" + "rightLemma:" + rightLemma + " " + "rightPos:" + rightPos);
     		//throw new LexicalResourceException(e.getMessage());
     	}
-		
-		return false;
+    	}
+		return result;
     }
     
     
@@ -1015,5 +1052,97 @@ public abstract class FixedWeightEditDistance implements DistanceCalculation {
     	}
     	
     }
+    
+    private String getGoldLabel(JCas aCas) {
+		FSIterator<TOP> pairIter = aCas.getJFSIndexRepository()
+				.getAllIndexedFS(Pair.type);
+		Pair p = (Pair) pairIter.next();
+		if (null == p.getGoldAnswer() || p.getGoldAnswer().equals("")
+				|| p.getGoldAnswer().equals("ABSTAIN")) {
+			return null;
+		} else {
+			return p.getGoldAnswer();
+		}
+	}
+
+
+	public int getResourceMatch() {
+		return resourceMatch;
+	}
+
+
+	public void setResourceMatch(int resourceMatch) {
+		this.resourceMatch = resourceMatch;
+	}
+
+
+	public int getPositiveResourceMatch() {
+		return positiveResourceMatch;
+	}
+
+
+	public void setPositiveResourceMatch(int positiveResourceMatch) {
+		this.positiveResourceMatch = positiveResourceMatch;
+	}
+
+
+	public int getNegativeResourceMatch() {
+		return negativeResourceMatch;
+	}
+
+
+	public void setNegativeResourceMatch(int negativeResourceMatch) {
+		this.negativeResourceMatch = negativeResourceMatch;
+	}
+
+
+	public int getLemmasMatch() {
+		return lemmasMatch;
+	}
+
+
+	public void setLemmasMatch(int lemmasMatch) {
+		this.lemmasMatch = lemmasMatch;
+	}
+
+
+	public int getNumberOfCoupleEntailed() {
+		return numberOfCoupleEntailed;
+	}
+
+
+	public void setNumberOfCoupleEntailed(int numberOfCoupleEntailed) {
+		this.numberOfCoupleEntailed = numberOfCoupleEntailed;
+	}
+
+
+	public int getNumberOfCoupleNotEntailed() {
+		return numberOfCoupleNotEntailed;
+	}
+
+
+	public void setNumberOfCoupleNotEntailed(int numberOfCoupleNotEntailed) {
+		this.numberOfCoupleNotEntailed = numberOfCoupleNotEntailed;
+	}
+
+
+	public int getPositiveLemmaMatch() {
+		return positiveLemmaMatch;
+	}
+
+
+	public void setPositiveLemmaMatch(int positiveLemmaMatch) {
+		this.positiveLemmaMatch = positiveLemmaMatch;
+	}
+
+
+	public int getNegativeLemmaMatch() {
+		return negativeLemmaMatch;
+	}
+
+
+	public void setNegativeLemmaMatch(int negativeLemmaMatch) {
+		this.negativeLemmaMatch = negativeLemmaMatch;
+	}
     
 }

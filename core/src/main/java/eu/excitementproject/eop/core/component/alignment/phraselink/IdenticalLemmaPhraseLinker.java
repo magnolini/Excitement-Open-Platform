@@ -7,13 +7,16 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.apache.uima.cas.CASException;
+import org.apache.uima.cas.FSIterator;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.cas.TOP;
 import org.uimafit.util.JCasUtil;
 
 import de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.POS;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Lemma;
 import de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Token;
 import eu.excitement.type.alignment.Link;
+import eu.excitement.type.entailment.Pair;
 import eu.excitementproject.eop.common.component.alignment.AlignmentComponent;
 import eu.excitementproject.eop.common.component.alignment.AlignmentComponentException;
 //import eu.excitementproject.eop.common.component.alignment.PairAnnotatorComponentException;
@@ -310,9 +313,15 @@ public class IdenticalLemmaPhraseLinker implements AlignmentComponent {
 			{
 				throw new AlignmentComponentException("Adding link instance failed with a CAS Exception. Something wasn't right on the input CAS.", e); 
 			}
-		}		
+		}
+		if(getGoldLabel(aJCas).equalsIgnoreCase("ENTAILMENT")){
+			entailmentCount[countNewLinks]++;
+		}else{
+			notEntailmentCount[countNewLinks]++;
+		}
 		
-		logger.info("added " + countNewLinks + " new links on the CAS" + " (ignored " + ignoredNoncontentMatches + " function-word only possible links)"); 
+		logger.info("added " + countNewLinks + " new links on the CAS " + " (ignored " + ignoredNoncontentMatches + " function-word only possible links)");
+		logger.info("Entail vector "+Arrays.toString(entailmentCount)+" not entailment vector "+Arrays.toString(notEntailmentCount));
 	}
 	
 	
@@ -326,6 +335,12 @@ public class IdenticalLemmaPhraseLinker implements AlignmentComponent {
 		return null; // this module does not support multiple-instances (e.g. with different configurations) 
 	}
 	
+	@Override
+	public void close() throws AlignmentComponentException
+	{
+		// nothing to close in this aligner. 
+	}
+
 	private static Boolean containsOnlyNonContentPOSes(Token[] tokenArr) throws AlignmentComponentException
 	{
 		logger.debug("checking non content POSes only or not: "); 
@@ -372,10 +387,42 @@ public class IdenticalLemmaPhraseLinker implements AlignmentComponent {
 		}		
 	}
 	
+	static String getGoldLabel(JCas aCas) {
+		FSIterator<TOP> pairIter = aCas.getJFSIndexRepository()
+				.getAllIndexedFS(Pair.type);
+		Pair p = (Pair) pairIter.next();
+		if (null == p.getGoldAnswer() || p.getGoldAnswer().equals("")
+				|| p.getGoldAnswer().equals("ABSTAIN")) {
+			return null;
+		} else {
+			return p.getGoldAnswer();
+		}
+	}
+	
+	public int[] getEntailmentCount() {
+		return entailmentCount;
+	}
+
+
+	public void setEntailmentCount(int[] entailmentCount) {
+		IdenticalLemmaPhraseLinker.entailmentCount = entailmentCount;
+	}
+
+	public int[] getNotEntailmentCount() {
+		return notEntailmentCount;
+	}
+
+
+	public void setNotEntailmentCount(int[] notEntailmentCount) {
+		IdenticalLemmaPhraseLinker.notEntailmentCount = notEntailmentCount;
+	}
+
 	// meta-information that will be added on link instances added by the module. 
 	final private static double DEFAULT_LINK_STR = 1.0; 
 	final private static String ALIGNER_ID = "IdenticalLemmas";
 	final private static String ALIGNER_VER = "1.0";
 	final private static String ALIGNER_LINK_INFO = "SameLemma"; 
+	private static int[] entailmentCount = new int[10];
+	private static int[] notEntailmentCount = new int[10];
 			
 }

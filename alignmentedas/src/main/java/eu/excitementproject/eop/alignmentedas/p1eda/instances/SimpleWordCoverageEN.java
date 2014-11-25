@@ -39,7 +39,7 @@ import eu.excitementproject.eop.core.component.alignment.phraselink.MeteorPhrase
  * 
  * 
  * (On this simple coverage setup, best was with all four aligners, with three features (without verb coverage ratio) 
- * on RTE3: 66.75)
+ * on RTE3: 66.75) (or 67.0 with older lexical linker --- some check needed why faster alinger gets less links) 
  * 
  * @author Tae-Gil Noh
  */

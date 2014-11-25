@@ -88,6 +88,12 @@ public class WordNetENLinker implements AlignmentComponent {
 		return null; 
 	}
 	
+	public void close() throws AlignmentComponentException
+	{
+		worker.close(); 
+	}
+
+	
 	private final LexicalAlignerFromLexicalResource worker; 
 	
 	// Default path. Note that this path won't work when EOP is in Jar. 
@@ -95,7 +101,11 @@ public class WordNetENLinker implements AlignmentComponent {
 	private static final String defaultWNPath = "../core/src/main/resources/ontologies/EnglishWordNet-dict"; 
 	
 	// Default "Relation". 
-	private static final WordNetRelation[] defaultEntailingRelations = new WordNetRelation[] { WordNetRelation.SYNONYM, WordNetRelation.DERIVATIONALLY_RELATED, WordNetRelation.HYPERNYM, WordNetRelation.INSTANCE_HYPERNYM, WordNetRelation.MEMBER_HOLONYM, WordNetRelation.PART_HOLONYM, WordNetRelation.ENTAILMENT, WordNetRelation.SUBSTANCE_MERONYM }; 
+//	private static final WordNetRelation[] defaultEntailingRelations = new WordNetRelation[] { WordNetRelation.SYNONYM};//, WordNetRelation.DERIVATIONALLY_RELATED, WordNetRelation.HYPERNYM, WordNetRelation.INSTANCE_HYPERNYM, WordNetRelation.MEMBER_HOLONYM, WordNetRelation.PART_HOLONYM, WordNetRelation.ENTAILMENT, WordNetRelation.SUBSTANCE_MERONYM };
+	
+//	private static final WordNetRelation[] defaultEntailingRelations = new WordNetRelation[] { WordNetRelation.HYPERNYM};
+	
+	private static final WordNetRelation[] defaultEntailingRelations = new WordNetRelation[] { WordNetRelation.DERIVATIONALLY_RELATED};
 	
 	// Default max multi-word expression length 
 	private static final int defaultMaxPhrase = 1; 

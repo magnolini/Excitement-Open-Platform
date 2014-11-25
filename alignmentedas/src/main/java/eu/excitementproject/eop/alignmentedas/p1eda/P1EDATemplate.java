@@ -20,6 +20,7 @@ import org.apache.uima.cas.FSIterator;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.jcas.tcas.Annotation;
+import org.jfree.util.Log;
 import org.uimafit.util.JCasUtil;
 
 import eu.excitement.type.entailment.Pair;
@@ -191,7 +192,7 @@ public abstract class P1EDATemplate implements EDABasic<TEDecisionWithAlignment>
 		
 		// Finally, return a TEDecision object with CAS (which holds alignments) 
 		logger.debug("TEDecision object generated and being returned: " + result.getLabel() + ", " + result.getConfidence()); 
-		return new TEDecisionWithAlignment(result.getLabel(), result.getConfidence(), pairID, eopJCas); 
+		return new TEDecisionWithAlignment(result.getLabel(), result.getConfidence(), pairID, eopJCas, featureValues); 
 	}
 	
 	public void initialize(CommonConfig conf) throws EDAException
@@ -424,8 +425,9 @@ public abstract class P1EDATemplate implements EDABasic<TEDecisionWithAlignment>
 	
 	protected List<LabeledInstance> makeLabeledInstancesFromXmiFiles(File xmiDir) throws EDAException
 	{
-		List<LabeledInstance> labeledData = new ArrayList<LabeledInstance>(); 
 		
+		List<LabeledInstance> labeledData = new ArrayList<LabeledInstance>(); 
+		try{
 		// walk each XMI files in the Directory ... 
 		File[] files =  xmiDir.listFiles(); 
 		if (files == null)
@@ -481,6 +483,9 @@ public abstract class P1EDATemplate implements EDABasic<TEDecisionWithAlignment>
 			logger.debug("a labeled instance has been generated from XMI file " + f.getName()); 
 			logger.debug(fv.toString() + ", " + l.toString()); 
 			labeledData.add(ins); 	
+		}
+		}catch (Exception e){
+			System.out.println(e);
 		}
 		
 		return labeledData; 

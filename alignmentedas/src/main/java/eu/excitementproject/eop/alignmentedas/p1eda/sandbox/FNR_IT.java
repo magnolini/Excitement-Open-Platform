@@ -53,8 +53,9 @@ public class FNR_IT extends P1EDATemplate {
 	public FNR_IT() throws EDAException
 	{	
 		try {
-			identicalLemmaLinker = new IdenticalLemmaPhraseLinker(); 
-			paraphraseLinker = new MeteorPhraseLinkerIT(); 
+			identicalLemmaLinker = new IdenticalLemmaPhraseLinker();
+			italianWordNetLinker = new WordNetITLinker("/home/magnolini/EOP/Excitement-Open-Platform-1.1.1/target/EOP-1.1.1/eop-resources-1.1.1/ontologies/ItalianWordNet");
+//			paraphraseLinker = new MeteorPhraseLinkerIT(); 
 		}
 		catch (AlignmentComponentException ae)
 		{
@@ -71,7 +72,8 @@ public class FNR_IT extends P1EDATemplate {
 
 		try {
 			identicalLemmaLinker.annotate(input);
-			paraphraseLinker.annotate(input); 
+			italianWordNetLinker.annotate(input);
+//			paraphraseLinker.annotate(input); 
 		}
 		catch (PairAnnotatorComponentException pe)
 		{
